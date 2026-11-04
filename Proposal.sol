@@ -28,7 +28,7 @@ contract CombinedProposal {
     address constant ENS_RESOLVER = 0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41;
     bytes32 constant ROOT_TORNADO_ENS_NODE = 0xe6ae31d630cc7a8279c0f1c7cbe6e7064814c47d1785fa2703d9ae511ee2be0c;
 
-    bytes constant CLASSIC_UI_IPFS_CONTENTHASH = hex"e3010170122031fdc81d48dea2004a10fd5c6deac9ce7ab1347bf603118431eee9ab17d01d0e";
+    bytes constant CLASSIC_UI_IPFS_CONTENTHASH = hex"e3010170122018a6a515f9d667a630a15ea00227a5694729bd0e6f3f311b0151229622be2a75";
 
     // ========== unregisterRelayer 0x999099076bE29A81cAd25f3BB63Eb62C0fD99999 ==========
     address constant RELAYER  = 0x999099076bE29A81cAd25f3BB63Eb62C0fD99999; 
@@ -37,7 +37,7 @@ contract CombinedProposal {
 
     function executeProposal() external {
 
-        require(IERC20(TORN).transfer(RECIPIENT, 200 ether), "TORN transfer failed");
+        require(IERC20(TORN).transfer(RECIPIENT, 300 ether), "TORN transfer failed");
 
         IENSResolver(ENS_RESOLVER).setContenthash(ROOT_TORNADO_ENS_NODE, CLASSIC_UI_IPFS_CONTENTHASH);
 
