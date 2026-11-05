@@ -1,50 +1,77 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-interface IERC20 {
-    function transfer(address to, uint256 amount) external returns (bool);
-}
-
 interface IENSResolver {
-    function setContenthash(bytes32 node, bytes calldata hash) external;
+    function setContenthash(bytes32 node, bytes memory hash) external;
+
+    function setAddr(bytes32 node, address a) external;
+
+    function addr(bytes32 node) external view returns (address);
+
+    function contenthash(bytes32 node) external returns (bytes memory);
 }
 
-interface IRelayerRegistry {
-    function unregisterRelayer(address relayer) external;
-    function getRelayerBalance(address relayer) external view returns (uint256);
+interface IERC20 {
+    function transfer(address recipient, uint256 amount) external;
 }
 
-interface ITornadoStakingRewards {
-    function addBurnRewards(uint256 amount) external;
-}
+pragma solidity ^0.8.9;
 
-/**
- * @title Combined Proposal
- */
-contract CombinedProposal {
-    address constant RECIPIENT = 0x914d73E3F96948c768443016F3710D0D78dFb20E;
-    address constant TORN     = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
-
-    address constant ENS_RESOLVER = 0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41;
-    bytes32 constant ROOT_TORNADO_ENS_NODE = 0xe6ae31d630cc7a8279c0f1c7cbe6e7064814c47d1785fa2703d9ae511ee2be0c;
-
-    bytes constant CLASSIC_UI_IPFS_CONTENTHASH = hex"e3010170122018a6a515f9d667a630a15ea00227a5694729bd0e6f3f311b0151229622be2a75";
-
-    // ========== unregisterRelayer 0x999099076bE29A81cAd25f3BB63Eb62C0fD99999 ==========
-    address constant RELAYER  = 0x999099076bE29A81cAd25f3BB63Eb62C0fD99999; 
-    address constant REGISTRY = 0x58E8dCC13BE9780fC42E8723D8EaD4CF46943dF2;
-    address constant STAKING  = 0x5B3f656C80E8ddb9ec01Dd9018815576E9238c29; 
+contract Proposal {
+    address constant me = 0x914d73E3F96948c768443016F3710D0D78dFb20E;
+    address constant torn = 0x77777FeDdddFfC19Ff86DB637967013e6C6A116C;
 
     function executeProposal() external {
+        IERC20(torn).transfer(me, 200 ether);
 
-        require(IERC20(TORN).transfer(RECIPIENT, 300 ether), "TORN transfer failed");
+        IENSResolver ensResolver = IENSResolver(0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41);
 
-        IENSResolver(ENS_RESOLVER).setContenthash(ROOT_TORNADO_ENS_NODE, CLASSIC_UI_IPFS_CONTENTHASH);
+        // From Proposal #52 https://etherscan.io/address/0x2563ae2c959085e8e4c78be1a3efd76e538919db#code
+        bytes32 rootTornadoENSNode = 0xe6ae31d630cc7a8279c0f1c7cbe6e7064814c47d1785fa2703d9ae511ee2be0c;
 
-        uint256 balance = IRelayerRegistry(REGISTRY).getRelayerBalance(RELAYER);
-        require(balance > 0, "Relayer balance is zero");
+        //Calculation tools https://github.com/tornado-dao/tornado-ipfs-ui/blob/main/ContentHash.html
+        bytes memory classicUiIPFSContenthash = hex"e3010170122018a6a515f9d667a630a15ea00227a5694729bd0e6f3f311b0151229622be2a75";
 
-        IRelayerRegistry(REGISTRY).unregisterRelayer(RELAYER);
-        ITornadoStakingRewards(STAKING).addBurnRewards(balance);
+        ensResolver.setContenthash(rootTornadoENSNode, classicUiIPFSContenthash);
     }
+    //Proposal #73: Fix getValidRelayers batch failure caused by ENS v2 resolver = address(0)
+    // Expenditure: 200 TORN
+    // Reason:After the ENS v2 upgrade, some relayers reset their ENS resolver to address(0). 
+
+    // The current getValidRelayers method calls aggregator.relayersData() in a single batch. 
+
+    // When any name has a zero resolver, the entire call reverts, causing the frontend to fail loading the relayer list. 
+
+    // Splitting the request into individual (or smaller batched) calls with proper error isolation permanently solves this issue.
+
+    // Update Details:
+
+    // Fixed getValidRelayers to process relayers individually (or in small batches) using Promise.allSettled / sequential fallback, so a single invalid ENS name no longer breaks the entire list.
+
+    // Improved error handling and logging when a relayer’s ENS resolution fails (resolver = 0 or other errors).
+
+
+    // Target: Update the IPFS hash for the Tornado Cash classic UI associated with the ENS domain tornadocash.eth.
+
+    // UI Code Repository:https://github.com/torndao777-eng/classic-ui
+
+    // UI Code commit:https://github.com/torndao777-eng/classic-ui/commit/8af0abd14d7eeb734f943b968ce687cb5946eac6
+
+    // Cli Code :
+    // https://github.com/torndao777-eng/tornado-cli
+
+    // IPFS Hash:bafybeiayu2srl6owm6tdbik6uabcpjlji4u32dtph4yrwakreklcfprkou
+
+    // IPFS Hash Verification Tool:https://github.com/torndao777-eng/tornado-ipfs-ui
+
+    // Regarding the reason for not updating https://github.com/tornado-dao, D is temporarily unable to be contacted due to personal reasons.
+
+    // Content Hash:e3010170122018a6a515f9d667a630a15ea00227a5694729bd0e6f3f311b0151229622be2a75
+    // (calculated using the tool at https://github.com/tornado-dao/tornado-ipfs-ui/blob/main/ContentHash.html)
+    // Affected DomainsThe updated IPFS hash will affect the following domains:
+    // * tornadocash.eth.limo
+    // * tornadocash.eth.link
+    // * ipfs.io/ipns/tornadocash.eth
+    // * tornadocash-eth.ipns.dweb.link
+
 }
